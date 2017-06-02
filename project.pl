@@ -15,18 +15,20 @@ decl --> det, any, pp, any, verb, any.
 inter --> preInter, any, pp, any.
 
 %% predicate used for general bindings
+%% if the color of the car is blue, ternaryBind(color,car,[blue])
+%% if the length of the rod is 20 inches, ternaryBind(length,rod,[20,inches])
 :- dynamic ternaryBind/3.
 
 %% required predicate that takes a sample sentence as a list
 %% and a string matched to some sort of output message
 :- dynamic execute/2.
-execute(Sent,Out) :-
+execute(Sentence,Out) :-
     %%receives declarative sentence
-    %make sure Sent is declarative
-    decl(Sent,[]),
+    %make sure Sentence is declarative
+    decl(Sentence,[]),
 
     %get individual parts of sentence
-    det(Sent,[Attr|T1]),
+    det(Sentence,[Attr|T1]),
     pp(T1,[Subj|T2]),
     verb(T2,Val),
     (
@@ -52,8 +54,8 @@ execute(Sent,Out) :-
     ),!|
 
     %%receives question
-    inter(Sent,[]),
-    preInter(Sent,[Attr|T1]),
+    inter(Sentence,[]),
+    preInter(Sentence,[Attr|T1]),
     pp(T1,[Subj|_]),
     (
     	%% there is a mathing ternaryBind
@@ -69,14 +71,14 @@ execute(Sent,Out) :-
 	),!|
 
     %% does not receive well-formed sentence
-    not(decl(Sent,[])),
-    not(inter(Sent,[])),
+    not(decl(Sentence,[])),
+    not(inter(Sentence,[])),
     swritef(Out,'I couldn\'t understand that.'),!.
 
-%% tests various cases
+%% tests various cases to make sure execute/2 works
 :- dynamic test/0.
 test() :-
-	%% make sure preexisting bindings don't change results
+	%% make sure current knowledge base doesn't change results
 	retractall(ternaryBind(color,car,_)),
 	retractall(ternaryBind(color,boat,_)),
 
