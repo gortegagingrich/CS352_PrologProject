@@ -3,15 +3,16 @@ p --> [of].
 det --> [the].
 verb --> [is].
 what --> [what].
+any --> [_].
 
 decl --> det, any, pp, any, verb, any.
-any --> [_].
+inter --> what, verb, det, any, pp, any.
 
 ternaryBind([],[],[]).
 
-:- dynamic test/1.
+:- dynamic execute/2.
 
-test(Sent) :-
+execute(Sent,Out) :-
     %%receives declarative sentence
     %make sure Sent is declarative
     decl(Sent,_),
@@ -23,7 +24,7 @@ test(Sent) :-
     (
         %given sentence matches preexisting rule
         ternaryBind(Attr,Subj,Val),
-        write('Yes.  That is correct') |
+        swritef(Out,'I know.') |
 
         %a different value is already bound to the subject
         %for the same attribute
@@ -31,11 +32,21 @@ test(Sent) :-
         Prop \== Val,
         (
             length(Prop,1), %Property is one word
-            writef('No, it is %w', Prop)|
+            swritef(Out,'No, it\'s %w.', Prop)|
             length(Prop,2), %Property is two words
-            writef('No, it is %w %w', Prop)
+            swritef(Out,'No, it\'s %w %w.', Prop)
         )|
 
         %add new binding if there is not a preexisting one
-        assertz(ternaryBind(Attr,Subj,Val))
-    ).
+        not(ternaryBind(Attr,Subj,_)),
+        swritef(Out,'OK.'),
+        assertz(ternaryBind(Attr,Subj,Val)),!
+    )|
+
+    %%receives question
+    inter(Sent,_)|
+
+    %% does not receive well-formed sentence
+    not(decl(Sent,_)),
+    not(inter(Sent,_)),
+    swritef(Out,'I couldn\'t understand that.'),!.
