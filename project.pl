@@ -1,21 +1,29 @@
+%% simple grammar definition
 pp --> p, det.
 p --> [of].
 det --> [the].
 verb --> [is].
 what --> [what].
 any --> [_].
+any --> [_,_].
 
+preInter --> what, verb, det.
+
+%% declarative sentence
 decl --> det, any, pp, any, verb, any.
-inter --> what, verb, det, any, pp, any.
+%% interogative sentence
+inter --> preInter, any, pp, any.
 
-ternaryBind([],[],[]).
+%% predicate used for general bindings
+:- dynamic ternaryBind/3.
 
+%% required predicate that takes a sample sentence as a list
+%% and a string matched to some sort of output message
 :- dynamic execute/2.
-
 execute(Sent,Out) :-
     %%receives declarative sentence
     %make sure Sent is declarative
-    decl(Sent,_),
+    decl(Sent,[]),
 
     %get individual parts of sentence
     det(Sent,[Attr|T1]),
@@ -40,13 +48,50 @@ execute(Sent,Out) :-
         %add new binding if there is not a preexisting one
         not(ternaryBind(Attr,Subj,_)),
         swritef(Out,'OK.'),
-        assertz(ternaryBind(Attr,Subj,Val)),!
-    )|
+        assert(ternaryBind(Attr,Subj,Val))
+    ),!|
 
     %%receives question
-    inter(Sent,_)|
+    inter(Sent,[]),
+    preInter(Sent,[Attr|T1]),
+    pp(T1,[Subj|_]),
+    (
+    	%% there is a mathing ternaryBind
+    	ternaryBind(Attr,Subj,Val),
+    	(
+    		length(Val,1),
+    		swritef(Out,'It\'s %w.',Val)|
+			length(Val,2),
+			swritef(Out,'It\'s %w %w.', Val)
+		) |
+		not(ternaryBind(Attr,Subj,_)),
+		swritef(Out,'I don\'t know.')
+	),!|
 
     %% does not receive well-formed sentence
-    not(decl(Sent,_)),
-    not(inter(Sent,_)),
+    not(decl(Sent,[])),
+    not(inter(Sent,[])),
     swritef(Out,'I couldn\'t understand that.'),!.
+
+%% tests various cases
+:- dynamic test/0.
+test() :-
+	%% make sure preexisting bindings don't change results
+	retractall(ternaryBind(color,car,_)),
+	retractall(ternaryBind(color,boat,_)),
+
+	%% test with given examples on project page
+	execute([what,is,the,color,of,the,car],"I don't know."),
+	execute([the,color,of,the,car,is,blue],"OK."),
+	execute([the,color,of,the,car,is,red],"No, it's blue."),
+	execute([the,color,of,the,car,is,blue],"I know."),
+	execute([what,is,the,color,of,the,car],"It's blue."),
+
+	%% test with 2 word property
+	execute([the,color,of,the,car,is,dark,blue],"No, it's blue."),
+	execute([the,color,of,the,boat,is,dark,blue],"OK."),
+	execute([the,color,of,the,boat,is,green],"No, it's dark blue."),
+	execute([the,color,of,the,boat,is,dark,green],"No, it's dark blue."),
+	execute([the,color,of,the,boat,is,light,blue],"No, it's dark blue."),
+	execute([the,color,of,the,boat,is,dark,blue],"I know."),
+	execute([what,is,the,color,of,the,boat],"It's dark blue."),!.
